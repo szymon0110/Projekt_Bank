@@ -1,0 +1,5 @@
+﻿  Banki.cpp
+C:\Users\arekk\OneDrive\Pulpit\Projekt_Bank\Banki\Banki\Banki.cpp(46,11): warning C4101: 'error': unreferenced local variable
+C:\Users\arekk\OneDrive\Pulpit\Projekt_Bank\Banki\Banki\Banki.cpp(47,9): warning C4101: 'kw': unreferenced local variable
+C:\Users\arekk\OneDrive\Pulpit\Projekt_Bank\Banki\Banki\Banki.cpp(45,19): warning C4101: 'stmt': unreferenced local variable
+  Banki.vcxproj -> C:\Users\arekk\OneDrive\Pulpit\Projekt_Bank\Banki\x64\Debug\Banki.exe
