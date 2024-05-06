@@ -7,19 +7,18 @@ void rejestr();
 void login();
 void tworzenie_bazy();
 int op1 = 0;
+string nazwy[3] = { "Byk", "¯ubr", "Kok" };
 int main()
 {
     tworzenie_bazy();
     menu();
 
     return 0;
-
 }
 void menu() {
     setlocale(LC_CTYPE, "Polish");
-    string nazwy[3] = { "Byk", "¯ubr", "Kok" };
     int op2 = 0;
-    cout << "Witamy!" << endl << "Wybierz Bank w którym chcesz lub masz konto:" << endl;;
+    cout << "Witamy!" << endl << "Wybierz Bank w którym chcesz lub masz konto:" << endl;
     cout << "1. Bank Byk" << endl << "2. Bank Zubr" << endl << "3. Bank Kok" << endl << "\n0. Wyjscie" << endl;
     cin >> op1;
     while (op1 < 0 || op1>3) {
@@ -44,7 +43,8 @@ void rejestr() {
     sqlite3* baza;
     sqlite3_stmt* stmt;
     char* error;
-    int kw;
+    string kw;
+    int sql;
     string imie, nazwisko, pesel, adres, haslo, p_haslo;
     int wiek;
     cout << "Wype³nij poni¿szy formularz!\n";
@@ -53,10 +53,15 @@ void rejestr() {
     cout << "Wiek: "; cin >> wiek;
     cout << "Pesel: "; cin >> pesel;
     cout << "Ulica zamieszkania: "; cin >> adres;
-    cout << "Has³o"; cin >> haslo;
-    cout << "Powtórz Has³o"; cin >> p_haslo;
+    cout << "Has³o: "; cin >> haslo;
+    cout << "Powtórz Has³o: "; cin >> p_haslo;
     //antek zrób validacjê !!!!!!!!!!! okokokokokokkok???????
     sqlite3_open("baza.db", &baza);
+    kw = "insert into Bank_" + nazwy[op1 - 1] + " VALUES('" + imie + "','" + nazwisko + "'," + to_string(wiek) + ",'" + pesel + "', '" + adres + "','" + haslo + "');";
+    sql = sqlite3_exec(baza, kw.c_str(), NULL, NULL, &error);
+    if (sql != SQLITE_OK) {
+        cout << "Error: " << error << endl;
+    }
     //kw = "insert into"
     /*char* error;
     sqlite3* db;
@@ -95,6 +100,7 @@ void login() {
 void tworzenie_bazy() {
     sqlite3* baza;
     string kw;
+    sqlite3_stmt* stmt;
     char* error;
     int sql;
     sqlite3_open("baza.db", &baza);
@@ -104,5 +110,10 @@ void tworzenie_bazy() {
     sql = sqlite3_exec(baza, kw.c_str(), NULL, NULL, &error);
     if (sql != SQLITE_OK)
         cout << "Error: " << error << endl;
+    //sqlite3_prepare_v2(baza,"select imie from Bank_¯ubr",-1,&stmt,0);
+    //const unsigned char* imie;
+    //sqlite3_step(stmt);
+    //imie = sqlite3_column_text(stmt, 1);
+    //cout << endl << "nazwisko: " << imie << endl;
     sqlite3_close(baza);
 }
