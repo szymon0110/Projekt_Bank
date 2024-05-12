@@ -46,19 +46,26 @@ void rejestr() {
     sqlite3_stmt* stmt;
     char* error;
     int kw;
-    string imie, nazwisko, pesel, adres, haslo, p_haslo;
+    string imie, nazwisko, pesel, email, num_tel, haslo, p_haslo;
     int wiek;
     vector<string> bledy;
-    regex imiona("[^0-9]");
+    regex imiona("[^0-9]+");
     regex zDuzej("[A-Z]");
     regex popPesel("[0-9]{4}[0-3]{1}[0-9}{1}[0-9]{5}");
+    regex popEmail("([_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4}))");
+    regex popNumTel("[0-9]{9}");
+    regex hasloDuza("[A-Z]+");
+    regex hasloMala("[a-z]+");
+    regex hasloLiczba("[0-9]+");
+    regex hasloSpec("[@!?]+");
 
     cout << "Wype³nij poni¿szy formularz!\n";
     cout << "Imie: "; cin >> imie;
     cout << "Nazwisko: "; cin >> nazwisko;
     cout << "Wiek: "; cin >> wiek;
     cout << "Pesel: "; cin >> pesel;
-    cout << "Adres zamieszkania (Ulica, Nr Lokalu, *Nr Mieszkania): "; cin >> adres;
+    cout << "Adres E-Mail: "; cin >> email;
+    cout << "Numer Telefonu: "; cin >> num_tel;
     cout << "Has³o"; cin >> haslo;
     cout << "Powtórz Has³o"; cin >> p_haslo;
 
@@ -86,9 +93,28 @@ void rejestr() {
         cout << "Błąd: Nieprawidłowy PESEL wprowadzony" << endl;
         bledy.push_back("Błąd: Nieprawidłowy PESEL wprowadzony");
     }
+    if (!regex_match(email, popEmail)) {
+        cout << "Błąd: Nieprawidłowy E-Mail wprowadzony" << endl;
+        bledy.push_back("Błąd: Nieprawidłowy E-Mail wprowadzony");
+    }
+    if (!regex_match(num_tel, popNumTel)) {
+        cout << "Błąd: Nieprawidłowy Numer Telefonu wprowadzony" << endl;
+        bledy.push_back("Błąd: Nieprawidłowy Numer Telefonu wprowadzony");
+    }
+    if (!regex_match(haslo, hasloDuza) or !regex_match(haslo, hasloMala) or !regex_match(haslo, hasloLiczba) || !regex_match(haslo, hasloSpec)) {
+        cout << "Błąd: Nieprawidłowe haslo: Przynajmniej\n1 duża litera,\n1 mała litera\n1 liczba\n1 znak specjalny" << endl;
+        bledy.push_back("Błąd: Nieprawidłowe haslo");
+    }
+    if (p_haslo != haslo) {
+        cout << "Błąd: Powtórzone Hasło inne niż Hasło" << endl;
+        bledy.push_back("Błąd: Powtórzone Hasło inne niż Hasło");
+    }
 
     if (bledy.size() > 0) {
-        rejestr();
+        if (count(bledy.begin(), bledy.end(), "Błąd: Jesteś za młody!"))
+            menu();
+        else
+            rejestr();
     }
 
     sqlite3_open("baza.db", &baza);
