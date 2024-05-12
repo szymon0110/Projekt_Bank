@@ -49,7 +49,8 @@ void rejestr() {
     string imie, nazwisko, pesel, email, num_tel, haslo, p_haslo;
     int wiek;
     vector<string> bledy;
-    regex imiona("[^0-9]+");
+    regex imionaNum("[^0-9]+");
+    regex imionaSpec("[^@!?]+");
     regex zDuzej("[A-Z]");
     regex popPesel("[0-9]{4}[0-3]{1}[0-9}{1}[0-9]{5}");
     regex popEmail("([_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4}))");
@@ -69,7 +70,7 @@ void rejestr() {
     cout << "Has³o"; cin >> haslo;
     cout << "Powtórz Has³o"; cin >> p_haslo;
 
-    if (!regex_match(imie, imiona)) {
+    if (!regex_match(imie, imionaNum) or !regex_match(imie, imionaSpec)) {
         cout << "Błąd: Liczby w imieniu" << endl;
         bledy.push_back("Błąd: Liczby w imieniu");
     }
@@ -77,7 +78,7 @@ void rejestr() {
         cout << "Błąd: Imię zaczyna się z małej litery" << endl;
         bledy.push_back("Błąd: Imię zaczyna się z małej litery");
     }
-    if (!regex_match(nazwisko, imiona)) {
+    if (!regex_match(nazwisko, imionaNum) or !regex_match(nazwisko, imionaSpec)) {
         cout << "Błąd: Liczby w nazwisku" << endl;
         bledy.push_back("Błąd: Liczby w nazwisku");
     }
@@ -101,7 +102,7 @@ void rejestr() {
         cout << "Błąd: Nieprawidłowy Numer Telefonu wprowadzony" << endl;
         bledy.push_back("Błąd: Nieprawidłowy Numer Telefonu wprowadzony");
     }
-    if (!regex_match(haslo, hasloDuza) or !regex_match(haslo, hasloMala) or !regex_match(haslo, hasloLiczba) || !regex_match(haslo, hasloSpec)) {
+    if (!regex_match(haslo, hasloDuza) or !regex_match(haslo, hasloMala) or !regex_match(haslo, hasloLiczba) or !regex_match(haslo, hasloSpec)) {
         cout << "Błąd: Nieprawidłowe haslo: Przynajmniej\n1 duża litera,\n1 mała litera\n1 liczba\n1 znak specjalny" << endl;
         bledy.push_back("Błąd: Nieprawidłowe haslo");
     }
