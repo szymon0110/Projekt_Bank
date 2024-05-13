@@ -8,6 +8,7 @@ void menu();
 void rejestr();
 void login();
 void tworzenie_bazy();
+int czy_w_bazie(const string& pesel);
 int op1 = 0;
 string nazwy[3] = { "Byk", "¯ubr", "Kok" };
 int main()
@@ -46,15 +47,19 @@ void rejestr() {
     sqlite3_stmt* stmt;
     char* error;
     int kw;
+    sqlite3_open("baza.db", &baza);
+
     string imie, nazwisko, pesel, email, num_tel, haslo, p_haslo;
     int wiek;
     vector<string> bledy;
+
     regex imionaNum("[^0-9]+");
     regex imionaSpec("[^@!?]+");
     regex zDuzej("[A-Z]");
-    regex popPesel("[0-9]{4}[0-3]{1}[0-9}{1}[0-9]{5}");
+    regex popPesel("[0-9]{11}");
     regex popEmail("([_a-z0-9-]+(\.[_a-z0-9-]+)*@[a-z0-9-]+(\.[a-z0-9-]+)*(\.[a-z]{2,4}))");
     regex popNumTel("[0-9]{9}");
+    regex popHaslo("(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\\-={}\\[\\]:;\"'<>,.?/\\\\]).{8,30}");
     regex hasloDuza("[A-Z]+");
     regex hasloMala("[a-z]+");
     regex hasloLiczba("[0-9]+");
@@ -67,10 +72,10 @@ void rejestr() {
     cout << "Pesel: "; cin >> pesel;
     cout << "Adres E-Mail: "; cin >> email;
     cout << "Numer Telefonu: "; cin >> num_tel;
-    cout << "Has³o"; cin >> haslo;
-    cout << "Powtórz Has³o"; cin >> p_haslo;
+    cout << "Has³o: "; cin >> haslo;
+    cout << "Powtórz Has³o: "; cin >> p_haslo;
 
-    if (!regex_match(imie, imionaNum) or !regex_match(imie, imionaSpec)) {
+    if (!regex_match(imie, imionaNum) || !regex_match(imie, imionaSpec)) {
         cout << "Błąd: Liczby w imieniu" << endl;
         bledy.push_back("Błąd: Liczby w imieniu");
     }
@@ -78,7 +83,7 @@ void rejestr() {
         cout << "Błąd: Imię zaczyna się z małej litery" << endl;
         bledy.push_back("Błąd: Imię zaczyna się z małej litery");
     }
-    if (!regex_match(nazwisko, imionaNum) or !regex_match(nazwisko, imionaSpec)) {
+    if (!regex_match(nazwisko, imionaNum) || !regex_match(nazwisko, imionaSpec)) {
         cout << "Błąd: Liczby w nazwisku" << endl;
         bledy.push_back("Błąd: Liczby w nazwisku");
     }
@@ -102,8 +107,8 @@ void rejestr() {
         cout << "Błąd: Nieprawidłowy Numer Telefonu wprowadzony" << endl;
         bledy.push_back("Błąd: Nieprawidłowy Numer Telefonu wprowadzony");
     }
-    if (!regex_match(haslo, hasloDuza) or !regex_match(haslo, hasloMala) or !regex_match(haslo, hasloLiczba) or !regex_match(haslo, hasloSpec)) {
-        cout << "Błąd: Nieprawidłowe haslo: Przynajmniej\n1 duża litera,\n1 mała litera\n1 liczba\n1 znak specjalny" << endl;
+    if (!regex_match(haslo, popHaslo)) {
+        cout << "Błąd: Nieprawidłowe haslo: Przynajmniej\n1 duża litera,\n1 mała litera\n1 liczba\n1 znak specjalny\nMin 8 Znaków\nMaks 30 znaków" << endl;
         bledy.push_back("Błąd: Nieprawidłowe haslo");
     }
     if (p_haslo != haslo) {
@@ -117,16 +122,33 @@ void rejestr() {
         else
             rejestr();
     }
+    else if (bledy.size() == 0) {
+        int wBazie = czy_w_bazie(pesel);
 
-    sqlite3_open("baza.db", &baza);
-    //kw = "insert into"
-    /*char* error;
+        if (wBazie == 1) {
+            cout << "Konto z tym peselem jest już zarejestrowane." << endl;
+            login();
+        }
+        else if (wBazie == 0) {
+            string kwerenda = "INSERT INTO Bank_Byk VALUES('" + imie + "', '" + nazwisko + "', " + to_string(wiek) + ", '" + pesel + "', '" + email + "', '" + num_tel + "', '" + haslo + "');";
+
+            int kw = sqlite3_exec(baza, kwerenda.c_str(), NULL, NULL, &error);
+
+            if (kw != SQLITE_OK) {
+                cout << "Error: " << error << endl;
+            }
+        }
+    }
+    sqlite3_close(baza);
+    /*
+    kw = "insert into"
+    char* error;
     sqlite3* db;
     sqlite3_stmt* stmt;
     string query;
     int kw;
     sqlite3_open("Baza.db", &db);
-    //int kw = sqlite3_exec(db,"CREATE TABLE IF NOT EXISTS bank(imie varchar(30), wiek INT);",NULL,NULL,&error);
+    int kw = sqlite3_exec(db,"CREATE TABLE IF NOT EXISTS bank(imie VARCHAR(30), wiek INT);",NULL,NULL,&error);
     kw = sqlite3_exec(db, "DELETE FROM bank", NULL, NULL, &error);
 
     for (int i = 0; i < 5; ++i) {
@@ -145,9 +167,8 @@ void rejestr() {
         wiek = sqlite3_column_int(stmt, 1);
         cout << "imie: " << imie << " Wiek: " << wiek << endl;
     }
-    sqlite3_finalize(stmt);*/
-    sqlite3_close(baza);
-
+    sqlite3_finalize(stmt);
+    */
 }
 void login() {
 
@@ -160,9 +181,9 @@ void tworzenie_bazy() {
     char* error;
     int sql;
     sqlite3_open("baza.db", &baza);
-    kw = "CREATE TABLE IF NOT EXISTS Bank_Byk(imie varchar(30), nazwisko varchar(30), wiek INT(3), pesel varchar(20), adres varchar(30), haslo varchar(30)); ";
-    kw += "CREATE TABLE IF NOT EXISTS Bank_¯ubr(imie varchar(30), nazwisko varchar(30), wiek INT(3), pesel varchar(20), adres varchar(30), haslo varchar(30));";
-    kw += "CREATE TABLE IF NOT EXISTS Bank_Kok(imie varchar(30), nazwisko varchar(30), wiek INT(3), pesel varchar(20), adres varchar(30), haslo varchar(30));";
+    kw = "CREATE TABLE IF NOT EXISTS Bank_Byk(imie VARCHAR(30), nazwisko VARCHAR(30), wiek INT(3), pesel VARCHAR(11), email VARCHAR(50), telefon VARCHAR(9), haslo VARCHAR(30));";
+    //kw += "CREATE TABLE IF NOT EXISTS Bank_Zubr(imie VARCHAR(30), nazwisko VARCHAR(30), wiek INT(3), pesel VARCHAR(11), email VARCHAR(50), telefon VARCHAR(9), haslo VARCHAR(30));";
+    //kw += "CREATE TABLE IF NOT EXISTS Bank_Kok(imie VARCHAR(30), nazwisko VARCHAR(30), wiek INT(3), pesel VARCHAR(11), email VARCHAR(50), telefon VARCHAR(9), haslo VARCHAR(30));";
     sql = sqlite3_exec(baza, kw.c_str(), NULL, NULL, &error);
     if (sql != SQLITE_OK)
         cout << "Error: " << error << endl;
@@ -172,4 +193,31 @@ void tworzenie_bazy() {
     //imie = sqlite3_column_text(stmt, 1);
     //cout << endl << "nazwisko: " << imie << endl;
     sqlite3_close(baza);
+}
+
+int czy_w_bazie(const std::string& pesel) {
+    sqlite3* baza;
+    char* error = nullptr;
+    int result = -1; // Initialize result to an error value
+
+    if (sqlite3_open("baza.db", &baza) == SQLITE_OK) { // Check if database opened successfully
+        // Construct the query string
+        std::string query = "SELECT EXISTS(SELECT 1 FROM Bank_Byk WHERE pesel = '" + pesel + "');";
+
+        // Execute the query
+        if (sqlite3_exec(baza, query.c_str(), NULL, NULL, &error) == SQLITE_OK) {
+            result = sqlite3_changes(baza); // Get the result directly
+        }
+        else {
+            std::cerr << "Error executing query: " << error << std::endl;
+            sqlite3_free(error);
+        }
+
+        sqlite3_close(baza); // Close the database connection
+    }
+    else {
+        std::cerr << "Error opening database" << std::endl;
+    }
+
+    return result;
 }
