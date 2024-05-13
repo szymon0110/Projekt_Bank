@@ -1,4 +1,4 @@
-﻿#include <iostream>
+#include <iostream>
 #include <string>
 #include "sqlite3/sqlite3.h"
 #include <regex>
@@ -7,9 +7,13 @@
 using namespace std;
 void menu();
 void rejestr();
-void login();
+string login();
 void tworzenie_bazy();
 void czy_w_bazie(const string& pesel, int& pesel_check, const string& email, int& email_check);
+void wplata(const string& email);
+void wyplata(const string& email);
+void podglad(const string& email);
+
 int op1 = 0;
 string nazwy[3] = { "Byk", "Żubr", "Kok" };
 int main()
@@ -35,11 +39,21 @@ void menu() {
     cout << "Witamy w Banku " << nazwy[op1 - 1] << endl;
     cout << "Wybierz opcje:\n1. Zajerestruj\n2. Zaloguj\n\n0. Wroc" << endl;
     cin >> op2;
-    if (op2 >= 0 && op2 < 3) {
-        if (op2 == 0)
-            menu();
-        op2 == 1 ? rejestr() : login();
-        
+    
+    switch (op2)
+    {
+    case 1:
+        rejestr();
+        break;
+    case 2:
+        login();
+        break;
+    case 0:
+        exit(0);
+        break;
+    default:
+        cout << "Błąd: Zła liczba podana." << endl;
+        break;
     }
 
 
@@ -53,6 +67,7 @@ void rejestr() {
 
     string imie, nazwisko, pesel, email, num_tel, haslo, p_haslo;
     int wiek, pesel_check, email_check;
+    double saldo = 0;
     vector<string> bledy;
 
     regex imionaNum("[^0-9]+");
@@ -130,24 +145,25 @@ void rejestr() {
             cout << "Konto z tym emailem jest już zarejestrowane!" << endl;
         if (pesel_check != 0) {
             cout << "Konto z tym peselem jest już zarejestrowane!" << endl;
-            
-        }
-        else{
 
-            string kwerenda = "INSERT INTO Bank_"+nazwy[op1-1] + " VALUES('" + imie + "', '" + nazwisko + "', " + to_string(wiek) + ", '" + pesel + "', '" + email + "', '" + num_tel + "', '" + haslo + "');";
+        }
+        else {
+
+            string kwerenda = "INSERT INTO Bank_" + nazwy[op1 - 1] + " VALUES('" + imie + "', '" + nazwisko + "', " + to_string(wiek) + ", '" + pesel + "', '" + email + "', '" + num_tel + "', '" + haslo + "', " + to_string(saldo) + ");";
 
             int kw = sqlite3_exec(baza, kwerenda.c_str(), NULL, NULL, &error);
 
             if (kw != SQLITE_OK) {
                 cout << "Error: " << error << endl;
             }
-            else
-                cout << "Pomyślnie utworzono konto w Banku "+nazwy[op1-1]+" !" << endl;
+            else {
+                cout << "Pomyślnie utworzono konto w Banku " + nazwy[op1 - 1] + " !" << endl;
+            }
+                
         }
     }
     sqlite3_close(baza);
     menu();
-    
     /*
     kw = "insert into"
     char* error;
@@ -178,7 +194,7 @@ void rejestr() {
     sqlite3_finalize(stmt);
     */
 }
-void login() {
+string login() {
     sqlite3* baza;
     string kw;
     sqlite3_stmt* stmt;
@@ -188,29 +204,53 @@ void login() {
     int login_check = 0;
 again:
     cout << "-----------------LOGIN-----------------" << endl;
-    cout << "E-Mail: ";cin >> email;
-    cout << "Hasło: ";cin >> haslo;
-    
+    cout << "E-Mail: "; cin >> email;
+    cout << "Hasło: "; cin >> haslo;
+
     sqlite3_open("baza.db", &baza);
-    kw = "Select COUNT(*) FROM Bank_"+nazwy[op1-1]+ " WHERE email = '" + email + "' AND haslo = '" + haslo + "';";
+    kw = "Select COUNT(*) FROM Bank_" + nazwy[op1 - 1] + " WHERE email = '" + email + "' AND haslo = '" + haslo + "';";
     if (sqlite3_prepare_v2(baza, kw.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
         if (sqlite3_step(stmt) == SQLITE_ROW) {
-            login_check = sqlite3_column_int(stmt,0);
+            login_check = sqlite3_column_int(stmt, 0);
             if (login_check == 0) {
                 cout << "E-Mail lub hasło jest nieprawidłowe\nSpróbuj jeszcze raz!" << endl;
                 goto again;
             }
-            else
-                cout << "Witamy ponownie w Banku "+nazwy[op1-1] +" !"<< endl;
+            else {
+                int logowanieWybor = 0;
+                cout << "Witamy ponownie w Banku " + nazwy[op1 - 1] + " !" << endl;
+                cout << endl << "Wybierz Opcje:\n\n1. Wpłata Pieniędzy\n2. Wypłata Pieniędzy\n3. Podgląd Salda\n\n0. Wyloguj" << endl;
+                cin >> logowanieWybor;
+                switch (logowanieWybor) {
+                case 1:
+                    wplata(email);
+                    break;
+                case 2:
+                    wyplata(email);
+                    break;
+                case 3:
+                    podglad(email);
+                    break;
+                case 0:
+                    menu(); // Return to the main menu
+                    break;
+                default:
+                    cout << "Złe dane wprowadzone." << endl;
+                    goto again;
+                    break;
+                }
+            }
+                
         }
         sqlite3_finalize(stmt);
     }
     else {
         cerr << "Error z preparev2: " << sqlite3_errmsg(baza) << endl;
+        return email;
     }
-    
 
 
+    sqlite3_close(baza);
 }
 
 
@@ -245,21 +285,21 @@ int czy_w_bazie(const string& pesel) {
 void czy_w_bazie(const string& pesel, int& pesel_check, const string& email, int& email_check) {
     sqlite3* baza;
     char* error = nullptr;
-    
 
-    if (sqlite3_open("baza.db", &baza) == SQLITE_OK){
-        string kw = "SELECT COUNT(*) FROM Bank_"+nazwy[op1-1] + " WHERE pesel = '" + pesel + "';";
+
+    if (sqlite3_open("baza.db", &baza) == SQLITE_OK) {
+        string kw = "SELECT COUNT(*) FROM Bank_" + nazwy[op1 - 1] + " WHERE pesel = '" + pesel + "';";
         sqlite3_stmt* stmt;
-        if (sqlite3_prepare_v2(baza, kw.c_str(), -1, &stmt, nullptr) == SQLITE_OK){
-            if (sqlite3_step(stmt) == SQLITE_ROW){
+        if (sqlite3_prepare_v2(baza, kw.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
+            if (sqlite3_step(stmt) == SQLITE_ROW) {
                 pesel_check = sqlite3_column_int(stmt, 0);
             }
             sqlite3_finalize(stmt);
         }
         else
             cerr << "Error pesel check: " << sqlite3_errmsg(baza) << endl;
-        
-        kw = "SELECT COUNT(*) FROM Bank_"+nazwy[op1-1] + " WHERE email = '" + email + "';";
+
+        kw = "SELECT COUNT(*) FROM Bank_" + nazwy[op1 - 1] + " WHERE email = '" + email + "';";
         if (sqlite3_prepare_v2(baza, kw.c_str(), -1, &stmt, nullptr) == SQLITE_OK) {
             if (sqlite3_step(stmt) == SQLITE_ROW) {
                 email_check = sqlite3_column_int(stmt, 0);
@@ -269,24 +309,89 @@ void czy_w_bazie(const string& pesel, int& pesel_check, const string& email, int
         else {
             cerr << "Error email check: " << sqlite3_errmsg(baza) << endl;
         }
-
-        sqlite3_close(baza);
     }
     else {
         cerr << "Error opening database" << endl;
     }
 
-    
+    sqlite3_close(baza);
 }
+
+void wplata(const string& email) {
+    sqlite3* baza;
+    char* error;
+    sqlite3_open("baza.db", &baza);
+
+    double wplacenie = 0.0;
+    cout << endl << "Podaj ilość pieniędzy do wpłacenia:" << endl;
+    cin >> wplacenie;
+    
+    string sql2 = "UPDATE Bank_" + nazwy[op1 - 1] + " SET saldo = saldo + " + to_string(wplacenie) + " WHERE email = '" + email + "';";
+
+    int kw2 = sqlite3_exec(baza, sql2.c_str(), NULL, NULL, &error);
+
+    if (kw2 != SQLITE_OK) {
+        cout << "Error:" << error << endl;
+    }
+    else {
+        cout << "Pomyślnie dodano " << to_string(wplacenie) << " do konta." << endl;
+    }
+    login();
+    sqlite3_close(baza);
+}
+
+void wyplata(const string& email) {
+    sqlite3* baza;
+    char* error;
+    sqlite3_stmt* stmt;
+    sqlite3_open("baza.db", &baza);
+
+    double wyplacenie = 0.0;
+    cout << endl << "Podaj ilość pieniędzy do wypłacenia:" << endl;
+    cin >> wyplacenie;
+
+    string sql = "UPDATE Bank_" + nazwy[op1 - 1] + " SET saldo = saldo + " + to_string(wyplacenie) + " WHERE email = '" + email + "';";
+
+    int kw = sqlite3_exec(baza, sql.c_str(), NULL, NULL, &error);
+
+    if (kw != SQLITE_OK) {
+        cout << "Error:" << error;
+    }
+    else {
+        cout << "Pomyślnie wypłacono " << to_string(wyplacenie) << " z konta." << endl;
+    }
+    login();
+    sqlite3_close(baza);
+}
+
+void podglad(const string& email) {
+    sqlite3* baza;
+    char* error;
+    sqlite3_stmt* stmt;
+    sqlite3_open("baza.db", &baza);
+
+    string kw1 = "SELECT saldo FROM Bank_" + nazwy[op1 - 1] + " WHERE email = '" + email + "';";
+
+    sqlite3_prepare_v2(baza, kw1.c_str(), -1, &stmt, 0);
+    double saldo;
+    while (sqlite3_step(stmt) != SQLITE_DONE) {
+        saldo = sqlite3_column_double(stmt, 0);
+        cout << "Stan Konta to: " << saldo << endl;
+    }
+    sqlite3_finalize(stmt);
+    login();
+    sqlite3_close(baza);
+}
+
 void tworzenie_bazy() {
     sqlite3* baza;
     string kw;
     char* error;
     int sql;
     sqlite3_open("baza.db", &baza);
-    kw = "CREATE TABLE IF NOT EXISTS Bank_Byk(imie VARCHAR(30), nazwisko VARCHAR(30), wiek INT(3), pesel VARCHAR(11), email VARCHAR(50), telefon VARCHAR(9), haslo VARCHAR(30));";
-    kw += "\nCREATE TABLE IF NOT EXISTS Bank_Żubr(imie VARCHAR(30), nazwisko VARCHAR(30), wiek INT(3), pesel VARCHAR(11), email VARCHAR(50), telefon VARCHAR(9), haslo VARCHAR(30));";
-    kw += "\nCREATE TABLE IF NOT EXISTS Bank_Kok(imie VARCHAR(30), nazwisko VARCHAR(30), wiek INT(3), pesel VARCHAR(11), email VARCHAR(50), telefon VARCHAR(9), haslo VARCHAR(30));";
+    kw = "CREATE TABLE IF NOT EXISTS Bank_Byk(imie VARCHAR(30), nazwisko VARCHAR(30), wiek INT(3), pesel VARCHAR(11), email VARCHAR(50), telefon VARCHAR(9), haslo VARCHAR(30), saldo DOUBLE(13));";
+    kw += "\nCREATE TABLE IF NOT EXISTS Bank_Żubr(imie VARCHAR(30), nazwisko VARCHAR(30), wiek INT(3), pesel VARCHAR(11), email VARCHAR(50), telefon VARCHAR(9), haslo VARCHAR(30), saldo DOUBLE(13));";
+    kw += "\nCREATE TABLE IF NOT EXISTS Bank_Kok(imie VARCHAR(30), nazwisko VARCHAR(30), wiek INT(3), pesel VARCHAR(11), email VARCHAR(50), telefon VARCHAR(9), haslo VARCHAR(30), saldo DOUBLE(13));";
     sql = sqlite3_exec(baza, kw.c_str(), NULL, NULL, &error);
     if (sql != SQLITE_OK)
         cout << "Error: " << error << endl;
