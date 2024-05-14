@@ -1,6 +1,6 @@
-#include <iostream>
+﻿#include <iostream>
 #include <string>
-#include "sqlite3/sqlite3.h"
+#include "sqlite/sqlite3.h"
 #include <regex>
 #include <vector>
 #include <Windows.h>
@@ -28,11 +28,11 @@ void menu() {
     setlocale(LC_CTYPE, "Polish");
     int op2 = 0;
     cout << "Witamy!" << endl << "Wybierz Bank w którym chcesz lub masz konto:" << endl;
-    cout << "1. Bank Byk" << endl << "2. Bank Zubr" << endl << "3. Bank Kok" << endl << "\n0. Wyjscie" << endl;
+    cout << "1. Bank Byk" << endl << "2. Bank Żubr" << endl << "3. Bank Kok" << endl << "\n0. Wyjscie" << endl;
     cin >> op1;
     while (op1 < 0 || op1>3) {
         cout << "Niestety nie ma takiej opcji" << "\nDokonaj ponownie wyboru:" << endl;
-        cout << "1. Bank Byk" << endl << "2. Bank ¯ubr" << endl << "3. Bank Kok" << endl << "\n0. Wyjscie" << endl;
+        cout << "1. Bank Byk" << endl << "2. Bank Żubr" << endl << "3. Bank Kok" << endl << "\n0. Wyjscie" << endl;
         cin >> op1;
     }
     if (op1 == 0)
@@ -84,7 +84,7 @@ void rejestr() {
     regex hasloMala("[a-z]+");
     regex hasloLiczba("[0-9]+");
     regex hasloSpec("[@!?]+");
-    system("cls");
+    
     cout << "-----------------Rejestracja-----------------" << endl;
     cout << "Wypełnij poniższy formularz!\n";
     cout << "Imie: "; cin >> imie;
@@ -124,20 +124,20 @@ void rejestr() {
         bledy.push_back("Błąd: Nieprawidłowe haslo: Przynajmniej\n1 duża litera,\n1 mała litera\n1 liczba\n1 znak specjalny\nMin 8 Znaków\nMaks 30 znaków");
     }
     if (p_haslo != haslo) {
-        cout << "Błąd: Powtórzone Hasło inne niż Hasło" << endl;
         bledy.push_back("Błąd: Powtórzone Hasło inne niż Hasło");
     }
 
     if (bledy.size() > 0) {
+        system("cls");
+        for (string i : bledy) {
+            cout << i << endl;
+            Sleep(500);
+        }
         if (count(bledy.begin(), bledy.end(), "Błąd: Jesteś za młody!"))
             menu();
         else {
-            for (string i : bledy) {
-                cout << i << endl;
-                Sleep(500);
-            }
             rejestr();
-        }  
+        }
     }
     else if (bledy.size() == 0) {
         czy_w_bazie(pesel, pesel_check, email, email_check);
@@ -158,6 +158,7 @@ void rejestr() {
             }
             else {
                 cout << "Pomyślnie utworzono konto w Banku " + nazwy[op1 - 1] + " !" << endl;
+                Sleep(1000);
             }
 
         }
@@ -339,6 +340,7 @@ void wplata(const string& email) {
     }
     else {
         cout << "Pomyślnie dodano " << to_string(wplacenie) << " do konta." << endl;
+        Sleep(1000);
     }
     login();
     sqlite3_close(baza);
@@ -347,22 +349,38 @@ void wplata(const string& email) {
 void wyplata(const string& email) {
     sqlite3* baza;
     char* error;
+    sqlite3_stmt* stmt;
     sqlite3_open("baza.db", &baza);
 
     double wyplacenie = 0.0;
     cout << endl << "Podaj ilość pieniędzy do wypłacenia:" << endl;
     cin >> wyplacenie;
 
-    string sql = "UPDATE Bank_" + nazwy[op1 - 1] + " SET saldo = saldo + " + to_string(wyplacenie) + " WHERE email = '" + email + "';";
+    string sql = "UPDATE Bank_" + nazwy[op1 - 1] + " SET saldo = saldo - " + to_string(wyplacenie) + " WHERE email = '" + email + "';";
 
-    int kw = sqlite3_exec(baza, sql.c_str(), NULL, NULL, &error);
+    string kw1 = "SELECT saldo FROM Bank_" + nazwy[op1 - 1] + " WHERE email = '" + email + "';";
 
-    if (kw != SQLITE_OK) {
-        cout << "Error:" << error;
+    sqlite3_prepare_v2(baza, kw1.c_str(), -1, &stmt, 0);
+    double saldo;
+    while (sqlite3_step(stmt) != SQLITE_DONE) {
+        saldo = sqlite3_column_double(stmt, 0);
+        if (saldo < wyplacenie) {
+            cout << "Nie masz tyle pieniędzy na koncie." << endl;
+        }
+        else {
+            int kw = sqlite3_exec(baza, sql.c_str(), NULL, NULL, &error);
+
+            if (kw != SQLITE_OK) {
+                cout << "Error:" << error;
+            }
+            else {
+                cout << "Pomyślnie wypłacono " << to_string(wyplacenie) << " z konta." << endl;
+            }
+        }
     }
-    else {
-        cout << "Pomyślnie wypłacono " << to_string(wyplacenie) << " z konta." << endl;
-    }
+    sqlite3_finalize(stmt);
+
+    Sleep(1000);
     login();
 
     sqlite3_close(baza);
