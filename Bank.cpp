@@ -1,8 +1,9 @@
-﻿#include <iostream>
+#include <iostream>
 #include <string>
-#include "sqlite/sqlite3.h"
+#include "sqlite3/sqlite3.h"
 #include <regex>
 #include <vector>
+#include <Windows.h>
 
 using namespace std;
 void menu();
@@ -36,6 +37,8 @@ void menu() {
     }
     if (op1 == 0)
         exit(0);
+
+    system("cls");
     cout << "Witamy w Banku " << nazwy[op1 - 1] << endl;
     cout << "Wybierz opcje:\n1. Zajerestruj\n2. Zaloguj\n\n0. Wroc" << endl;
     cin >> op2;
@@ -60,7 +63,7 @@ void menu() {
 }
 void rejestr() {
     sqlite3* baza;
-    
+
     char* error;
     int kw;
     sqlite3_open("baza.db", &baza);
@@ -81,6 +84,7 @@ void rejestr() {
     regex hasloMala("[a-z]+");
     regex hasloLiczba("[0-9]+");
     regex hasloSpec("[@!?]+");
+    system("cls");
     cout << "-----------------Rejestracja-----------------" << endl;
     cout << "Wypełnij poniższy formularz!\n";
     cout << "Imie: "; cin >> imie;
@@ -93,40 +97,31 @@ void rejestr() {
     cout << "Powtórz Hasło: "; cin >> p_haslo;
 
     if (!regex_match(imie, imionaNum) || !regex_match(imie, imionaSpec)) {
-        cout << "Błąd: Liczby w imieniu" << endl;
         bledy.push_back("Błąd: Liczby w imieniu");
     }
     if (!isupper(imie[0])) {
-        cout << "Błąd: Imię zaczyna się z małej litery" << endl;
         bledy.push_back("Błąd: Imię zaczyna się z małej litery");
     }
     if (!regex_match(nazwisko, imionaNum) || !regex_match(nazwisko, imionaSpec)) {
-        cout << "Błąd: Liczby w nazwisku" << endl;
         bledy.push_back("Błąd: Liczby w nazwisku");
     }
     if (!isupper(nazwisko[0])) {
-        cout << "Błąd: Nazwisko zaczyna się z małej litery" << endl;
         bledy.push_back("Błąd: Nazwisko zaczyna się z małej litery");
     }
     if (wiek < 18) {
-        cout << "Błąd: Jesteś za młody!" << endl;
         bledy.push_back("Błąd: Jesteś za młody!");
     }
     if (!regex_match(pesel, popPesel)) {
-        cout << "Błąd: Nieprawidłowy PESEL wprowadzony" << endl;
         bledy.push_back("Błąd: Nieprawidłowy PESEL wprowadzony");
     }
     if (!regex_match(email, popEmail)) {
-        cout << "Błąd: Nieprawidłowy E-Mail wprowadzony" << endl;
         bledy.push_back("Błąd: Nieprawidłowy E-Mail wprowadzony");
     }
     if (!regex_match(num_tel, popNumTel)) {
-        cout << "Błąd: Nieprawidłowy Numer Telefonu wprowadzony" << endl;
         bledy.push_back("Błąd: Nieprawidłowy Numer Telefonu wprowadzony");
     }
     if (!regex_match(haslo, popHaslo)) {
-        cout << "Błąd: Nieprawidłowe haslo: Przynajmniej\n1 duża litera,\n1 mała litera\n1 liczba\n1 znak specjalny\nMin 8 Znaków\nMaks 30 znaków" << endl;
-        bledy.push_back("Błąd: Nieprawidłowe haslo");
+        bledy.push_back("Błąd: Nieprawidłowe haslo: Przynajmniej\n1 duża litera,\n1 mała litera\n1 liczba\n1 znak specjalny\nMin 8 Znaków\nMaks 30 znaków");
     }
     if (p_haslo != haslo) {
         cout << "Błąd: Powtórzone Hasło inne niż Hasło" << endl;
@@ -136,8 +131,13 @@ void rejestr() {
     if (bledy.size() > 0) {
         if (count(bledy.begin(), bledy.end(), "Błąd: Jesteś za młody!"))
             menu();
-        else
+        else {
+            for (string i : bledy) {
+                cout << i << endl;
+                Sleep(500);
+            }
             rejestr();
+        }  
     }
     else if (bledy.size() == 0) {
         czy_w_bazie(pesel, pesel_check, email, email_check);
@@ -162,6 +162,7 @@ void rejestr() {
 
         }
     }
+    system("cls");
     sqlite3_close(baza);
     menu();
     /*
@@ -202,6 +203,7 @@ string login() {
     string email;
     string haslo;
     int login_check = 0;
+    system("cls");
 again:
     cout << "-----------------LOGIN-----------------" << endl;
     cout << "E-Mail: "; cin >> email;
@@ -243,7 +245,7 @@ again:
             }
 
         }
-        
+
     }
     else {
         cerr << "Error z preparev2: " << sqlite3_errmsg(baza) << endl;
@@ -362,7 +364,7 @@ void wyplata(const string& email) {
         cout << "Pomyślnie wypłacono " << to_string(wyplacenie) << " z konta." << endl;
     }
     login();
-    
+
     sqlite3_close(baza);
 }
 
@@ -382,7 +384,18 @@ void podglad(const string& email) {
     }
     sqlite3_finalize(stmt);
     sqlite3_close(baza);
-    login();
+
+    int wyjdz = 0;
+saldo:
+    cout << "0. Wyjdź" << endl;
+    cin >> wyjdz;
+    if (wyjdz == 0) {
+        login();
+    }
+    else {
+        cout << "Błąd" << endl;
+        goto saldo;
+    }
 }
 
 void tworzenie_bazy() {
